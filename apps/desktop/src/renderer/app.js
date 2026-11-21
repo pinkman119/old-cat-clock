@@ -733,7 +733,6 @@
   function setTab(name) {
     var wb = $('.w-body');
     if (wb) wb.scrollTop = 0;
-    scrollTarget = null;
     $$('.w-page').forEach(function (p) { p.hidden = p.getAttribute('data-page') !== name });
     $$('.tab').forEach(function (t) { t.setAttribute('aria-selected', String(t.getAttribute('data-tab') === name)) });
     if (name === 'calendar') { $('#calListView').hidden = false; $('#calDetailView').hidden = true; selectedKey = null; renderCalendar() }
@@ -964,39 +963,29 @@
   });
   window.addEventListener('resize', function () { sizeConfetti() });
 
-  /* 全窗体滚轮：窗口任意位置滚轮都驱动内容区滚动；惯性插值让滚动丝滑 */
-  var scrollTarget = null;
-  var scrollRaf = null;
-  function smoothScrollStep() {
-    var body = $('.w-body');
-    if (!body) { scrollRaf = null; return }
-    var diff = scrollTarget - body.scrollTop;
-    if (Math.abs(diff) < 0.6) {
-      body.scrollTop = scrollTarget;
-      scrollRaf = null;
-      return;
-    }
-    body.scrollTop += diff * 0.24;
-    scrollRaf = requestAnimationFrame(smoothScrollStep);
+  /* 全窗体滚轮：内容区交给浏览器原生滚动（最灵敏、自带平滑）；
+     标题栏 / 导航等非内容区域滚轮由 JS 驱动同一个容器，保证全窗体都能滚。 */
+  function wheelUnit(ev, body) {
+    return ev.deltaMode === 1 ? 16 : (ev.deltaMode === 2 ? body.clientHeight : 1);
   }
   document.addEventListener('wheel', function (ev) {
     if (ev.ctrlKey || mode !== 'full') return;
     if ($('.mask.show')) return;
     var body = $('.w-body');
     if (!body || body.scrollHeight <= body.clientHeight) return;
-    var inner = ev.target.closest && ev.target.closest('.tp-list,.note-content,.mm-body');
-    if (inner && inner.scrollHeight > inner.clientHeight) {
-      var atTop = inner.scrollTop <= 0 && ev.deltaY < 0;
-      var atBottom = inner.scrollTop + inner.clientHeight >= inner.scrollHeight - 1 && ev.deltaY > 0;
-      if (!atTop && !atBottom) return; // 内部列表先滚，到边界后交给外层
+    if (body.contains(ev.target)) {
+      // 内部可滚容器优先；滚到边界时把这一格接力给外层，避免卡住
+      var inner = ev.target.closest && ev.target.closest('.tp-list,.note-content,.mm-body');
+      if (inner && inner.scrollHeight > inner.clientHeight) {
+        var atTop = inner.scrollTop <= 0 && ev.deltaY < 0;
+        var atBottom = inner.scrollTop + inner.clientHeight >= inner.scrollHeight - 1 && ev.deltaY > 0;
+        if (atTop || atBottom) body.scrollTop += ev.deltaY * wheelUnit(ev, body);
+      }
+      return; // 不拦截，交给原生滚动
     }
     ev.preventDefault();
-    var delta = ev.deltaMode === 1 ? ev.deltaY * 16 : ev.deltaY;
-    var max = body.scrollHeight - body.clientHeight;
-    var base = scrollTarget === null ? body.scrollTop : scrollTarget;
-    scrollTarget = Math.max(0, Math.min(max, base + delta));
-    if (!scrollRaf) scrollRaf = requestAnimationFrame(smoothScrollStep);
-  }, { passive: false });
+    body.scrollTop += ev.deltaY * wheelUnit(ev, body) * 1.3;
+  }, { passive: false, capture: true });
 
   /* ===== 启动 ===== */
   if (!api) {

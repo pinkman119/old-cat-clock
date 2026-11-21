@@ -27,7 +27,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
 /* 无边框窗口：整个窗体可拖动，交互控件除外 */
 .widget,.login-shell{-webkit-app-region:drag}
 .widget button,.widget input,.widget textarea,.widget select,.widget label,
-.widget .tabbar,.widget .tp-list,.widget .countdown-card,
+.widget .w-body,.widget .w-page,.widget .tp-list,.widget .countdown-card,
 .widget .c-expand,.widget .c-count,.widget .c-progress,.widget .c-earn,
 .mask,.modal,.toast,.finale-banner,.login-card{-webkit-app-region:no-drag}
 
@@ -57,7 +57,7 @@ body[data-mode="compact"] #widgetCompact{display:flex;animation:pageIn .38s var(
 .icon-btn{width:22px;height:22px;display:grid;place-items:center;border-radius:6px;font-size:14px;color:var(--low);transition:background .2s,color .2s}
 .icon-btn:hover{background:rgba(242,246,234,.09);color:var(--hi)}
 .icon-btn--close:hover{background:rgba(211,120,100,.18);color:#e5a899}
-.w-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(211,228,137,.28) transparent}
+.w-body{flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(211,228,137,.28) transparent}
 .w-body::-webkit-scrollbar{width:5px}
 .w-body::-webkit-scrollbar-thumb{background:rgba(211,228,137,.28);border-radius:99px}
 .w-body::-webkit-scrollbar-thumb:hover{background:rgba(211,228,137,.5)}

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.tsbuildinfo
+*.log
+.DS_Store
+.idea/
+.vscode/
+
+# 环境变量
+.env
+.env.local
+
+# 服务端运行时数据（含账户密码哈希，禁止提交）
+apps/server/data/*.json
+apps/server/data/*.json.bak

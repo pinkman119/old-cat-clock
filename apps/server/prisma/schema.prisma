@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  user
+}
+
+model User {
+  id           String          @id @default(uuid())
+  username     String          @unique
+  displayName  String
+  role         UserRole        @default(user)
+  createdAt    DateTime        @default(now())
+  passwordHash String
+  workConfig   WorkConfig?
+  todos        Todo[]
+  dayNotes     DayNote[]
+  dayRecords   WorkDayRecord[]
+}
+
+/// 每用户一份的工资/工时配置（原型 cfg）
+model WorkConfig {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monthly         Int      @default(12000)
+  workDays        Int      @default(21)
+  workStart       String   @default("09:00")
+  workEnd         String   @default("18:00")
+  lunchStart      String   @default("12:00")
+  lunchEnd        String   @default("13:00")
+  otStart         String   @default("18:00")
+  remindMin       Int      @default(60)
+  autoBoot        Boolean  @default(false)
+  excludeHolidays Boolean  @default(false)
+  customHolidays  String[] @default([])
+  /// 加班工资梯度 [{ time: "HH:MM", pay: number }]
+  tiers           Json     @default("[]")
+}
+
+/// 待办：文本 + 提醒时刻 + 归属日期
+model Todo {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text      String
+  remindAt  String
+  date      String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
+}
+
+/// 每日小记：按用户+日期唯一
+model DayNote {
+  id      String @id @default(uuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date    String
+  content String
+
+  @@unique([userId, date])
+}
+
+/// 每日工作记录：启动打卡时刻 + 加班安排
+model WorkDayRecord {
+  id        String  @id @default(uuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String
+  checkinAt String?
+  overtime  Boolean @default(false)
+  otStart   String?
+  otEnd     String?
+
+  @@unique([userId, date])
+}
+
+/// 情话：每小时一句，Vue 后台维护
+model LoveNote {
+  id        String   @id @default(uuid())
+  content   String   @unique
+  createdAt DateTime @default(now())
+}

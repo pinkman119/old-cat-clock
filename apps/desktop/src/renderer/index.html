@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>耄猫时钟</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- 登录视图：服务端账户登录 -->
+  <div class="login-shell" id="loginView">
+    <div class="login-head"></div>
+    <div class="login-card">
+      <div class="brand-mark">
+        <span class="ear left"></span><span class="ear right"></span><span class="face"></span>
+      </div>
+      <h2>耄猫时钟</h2>
+      <p class="login-sub">给她的带薪时钟 · 登录后开始计时</p>
+      <form id="loginForm">
+        <label>账户<input id="username" autocomplete="username" placeholder="由管理后台配置" required /></label>
+        <label>密码<input id="password" type="password" autocomplete="current-password" placeholder="请输入密码" required /></label>
+        <p id="loginError" class="error"></p>
+        <button class="btn primary block" type="submit" id="loginSubmit">登录</button>
+      </form>
+      <p class="login-foot">服务端 <span id="loginServerStatus">检测中</span> · 账号在 Vue 管理后台配置</p>
+    </div>
+  </div>
+
+  <div class="app" id="appView">
+    <section class="widget widget--full" id="widgetFull" aria-label="带薪时钟">
+      <div class="w-head">
+        <div class="logo"><span class="logo-yen"><svg viewBox="0 0 40 44" role="img" aria-label="甲骨文猫"><g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 17 L11 4 L19 12"/><path d="M32 17 L29 4 L21 12"/><path d="M11 13 C7 21 9 30 20 35 C31 30 33 21 29 13"/><path d="M15 21 h3.5"/><path d="M21.5 21 h3.5"/><path d="M18.5 27 L20 29 L21.5 27"/><path d="M10 25 L3 23"/><path d="M10 28 L4 30"/><path d="M30 25 L37 23"/><path d="M30 28 L36 30"/></g></svg></span><span class="logo-cn">耄猫时钟</span><span class="logo-en">MAO CAT</span></div>
+        <div class="w-actions">
+          <button class="icon-btn" data-tab="settings" aria-label="设置" title="设置">···</button>
+          <button class="icon-btn" data-action="compact" aria-label="缩小" title="缩放版">−</button>
+          <button class="icon-btn icon-btn--close" data-action="close" aria-label="退到后台" title="退到后台（托盘可退出）">×</button>
+        </div>
+      </div>
+
+      <div class="w-body">
+        <!-- 时钟页 -->
+        <div class="w-page" id="pageClock" data-page="clock">
+          <div class="w-date">
+            <span id="dateText">加载中</span>
+            <span class="status-pill" id="statusPill"><i></i><span id="statusText">连接中</span></span>
+          </div>
+          <div class="earn-label">今日已赚 · CNY</div>
+          <div class="earn-amount" id="earnAmount"><span class="yen">¥</span><span id="earnedNum" class="roll-host">0.00</span><div class="gain-fx" id="gainFx" aria-hidden="true"></div></div>
+          <div class="earn-sub">每小时 <b id="hourlyNum">CNY 0.00</b> · 每一分钟，都有回报</div>
+          <div class="earn-footnote" id="earnFootnote">入时对算 · 无需兑换手续费</div>
+
+          <div class="progress-card">
+            <div class="pc-top"><span>今日进度</span><b id="progressPct">0.0%</b></div>
+            <div class="progress-track"><div class="progress-fill" id="progressFill"><span class="progress-head" id="progressHead"></span></div></div>
+            <div class="day-timeline" id="dayTimeline" aria-label="今日时段">
+              <div class="tl-seg work" id="tlSegWork1">工作</div>
+              <div class="tl-seg lunch" id="tlSegLunch">午休</div>
+              <div class="tl-seg work" id="tlSegWork2">工作</div>
+              <span class="tl-now" id="tlNow"></span>
+            </div>
+            <div class="tl-times" id="tlTimes">
+              <span id="tlTimeStart">09:00</span><span class="lunch-t" id="tlTimeLunchS">12:00</span><span class="lunch-t" id="tlTimeLunchE">13:00</span><span id="tlTimeEnd">18:00</span>
+            </div>
+            <div class="ot-progress" id="otProgress" hidden>
+              <div class="ot-top"><span>加班进度<em>超额完成</em></span><b id="otPct">0.0%</b></div>
+              <div class="ot-track"><div class="ot-fill" id="otFill"></div><span class="ot-mark" id="otMark" title="正常下班 100%"></span></div>
+              <div class="ot-bottom"><span>正常下班 <b>100%</b></span><span>加班时长 <b id="otMinText">0h 00m</b></span></div>
+            </div>
+            <div class="pc-bottom"><span id="workRangeText">09:00 —— 18:00</span><span>目标 CNY <b id="targetNum">0.00</b></span></div>
+          </div>
+
+          <div class="countdown-card" id="countdownCard" title="点击提前设置加班">
+            <div class="cd-left"><div class="cd-label">距离下班</div><div class="cd-hint">归零会询问你是否加班，点击提前设置加班</div></div>
+            <div class="cd-value" id="countdown">--:--:--</div>
+          </div>
+
+          <div class="divider"><span></span><span class="note">写给你的话 · 每小时一句</span><span class="star">✦</span></div>
+
+          <div class="cat-card" id="catCard" data-state="work">
+            <div class="quote-mark" aria-hidden="true">“</div>
+            <div class="cat-info">
+              <div class="cat-k"> TO HER · 每小时一句</div>
+              <div class="cat-love" id="catLove">正在向你走来…</div>
+              <div class="cat-desc" id="catNext">下次更新 --:00</div>
+            </div>
+          </div>
+
+          <button class="note-entry" id="noteEntry" title="写下今天的感悟">
+            <span class="ne-mark" aria-hidden="true">✎</span>
+            <span class="ne-body"><span class="ne-k">今日小记 · 写给自己</span><span class="ne-text empty" id="notePreview">记录此刻的心情与感悟…</span></span>
+            <span class="ne-go" aria-hidden="true">›</span>
+          </button>
+
+          <div class="moyu-head"><b>摸鱼魔盒</b> · 忙里偷个闲</div>
+          <div class="moyu-grid">
+            <button class="moyu-btn" id="moyuImg" data-kind="img" title="随机来一张图，放松眼睛">
+              <span class="mb-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="m4 18 5.2-5.2a1.6 1.6 0 0 1 2.2 0L16 17m1-2 2-2a1.6 1.6 0 0 1 2.2 0L22 16"/></svg></span>
+              <span class="mb-txt"><span class="mb-k">图片魔盒</span><span class="mb-d">随机一张风景</span></span>
+            </button>
+            <button class="moyu-btn" id="moyuPoem" data-kind="poem" title="随机读一首诗，养养心">
+              <span class="mb-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-2-1.4-4.6-1.8-8-1v12c3.4-.8 6-.4 8 1 2-1.4 4.6-1.8 8-1V5c-3.4-.8-6-.4-8 1Z"/><path d="M12 6v12"/></svg></span>
+              <span class="mb-txt"><span class="mb-k">诗歌魔盒</span><span class="mb-d">随机一首古诗</span></span>
+            </button>
+            <button class="moyu-btn" id="moyuSaying" data-kind="saying" title="随机来一句莫名其妙的话，开心一下">
+              <span class="mb-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5c-1.1 0-2.2-.24-3.1-.67L5 20l1.3-3.6A7.5 7.5 0 1 1 20 11.5Z"/><path d="M9.8 9.4a2.3 2.3 0 0 1 4.4.9c0 1.5-2.2 1.8-2.2 3.1"/><path d="M12 16.4h.01"/></svg></span>
+              <span class="mb-txt"><span class="mb-k">莫名其妙的话</span><span class="mb-d">随机一句没头没脑的话</span></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 待办页 -->
+        <div class="w-page todo-panel" id="todoPanel" data-page="todo" hidden aria-label="今日待办">
+          <div class="tp-head">
+            <span class="tp-title">待办清单</span>
+            <span class="tp-count" id="tpCount"><b>0</b> / 0 完成</span>
+          </div>
+          <div class="tp-datebar">
+            <button class="tp-dnav" id="tpPrev" aria-label="前一天" title="前一天">‹</button>
+            <label class="tp-date" title="点这里选日期"><span id="tpDateLabel">今天</span><input type="date" id="tpDatePick" aria-label="选择日期"></label>
+            <button class="tp-dnav" id="tpNext" aria-label="后一天" title="后一天">›</button>
+            <button class="tp-today" id="tpToday" hidden>今天</button>
+          </div>
+          <form class="tp-form" id="tpForm" autocomplete="off">
+            <input class="tp-input" id="tpInput" type="text" maxlength="40" placeholder="要做点什么？" aria-label="待办事项">
+            <input class="tp-time" id="tpTime" type="time" aria-label="提醒时间">
+            <button class="tp-add" type="submit">＋ 添加到时间线</button>
+          </form>
+          <div class="tp-list" id="tpList"></div>
+          <div class="tp-foot">
+            <span class="tp-quick">到点会提醒你 · 完成后勾选划掉</span>
+            <button class="tp-clear" id="tpClear" type="button" disabled>清除已完成</button>
+          </div>
+        </div>
+
+        <!-- 日历页 -->
+        <div class="w-page" id="pageCalendar" data-page="calendar" hidden>
+          <div id="calListView">
+            <div class="cal-head">
+              <button class="back-btn" id="prevMonth" aria-label="上个月">‹</button>
+              <div class="cal-title" id="calMonthTitle">加载中</div>
+              <div class="cal-nav"><button id="nextMonth" aria-label="下个月">›</button></div>
+            </div>
+            <div class="cal-stats">
+              <div class="cal-stat"><div class="cs-k">总工作时长</div><div class="cs-v hl" id="calHours">0h</div></div>
+              <div class="cal-stat"><div class="cs-k">已获薪资</div><div class="cs-v" id="calIncome">¥0</div></div>
+              <div class="cal-stat"><div class="cs-k">平均每日时长</div><div class="cs-v" id="calAvg">0h</div></div>
+            </div>
+            <div class="cal-days">
+              <div class="cal-day work"><i></i><span class="cd-k">出勤</span><span class="cd-v" id="calWorkDays">0天</span></div>
+              <div class="cal-day rest"><i></i><span class="cd-k">休息</span><span class="cd-v" id="calRestDays">0天</span></div>
+              <div class="cal-day ot"><i></i><span class="cd-k">加班</span><span class="cd-v" id="calOtDays">0天</span></div>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+            <div class="cal-legend"><span><i></i>有加班</span><span id="legendHoli" hidden><i class="holi"></i>法定假休息</span><span id="legendMakeup" hidden><i class="makeup"></i>调休上班</span><span>点击日期看当天统计</span></div>
+          </div>
+          <div id="calDetailView" hidden>
+            <div class="detail-head">
+              <button class="back-btn" id="backToCal" aria-label="返回日历">←</button>
+              <div class="detail-title" id="detailTitle">-</div>
+              <div class="detail-sub" id="detailWeek">-</div>
+            </div>
+            <div class="day-hero">
+              <div class="dh-k">当天薪资</div>
+              <div class="dh-v" id="dayPay">¥0</div>
+              <div class="dh-badge no" id="dayOtBadge">未加班</div>
+              <div class="dh-sub" id="dayPaySub">基本工资，未计加班</div>
+            </div>
+            <div class="day-grid">
+              <div class="day-item"><div class="di-k"><i></i>当天总工作时长</div><div class="di-v accent" id="dayHours">0h 00m</div><div class="di-note" id="dayHoursNote">含加班时长</div></div>
+              <div class="day-item"><div class="di-k"><i></i>当天薪资</div><div class="di-v" id="dayPay2">¥0</div><div class="di-note" id="dayPay2Note">基本 + 加班</div></div>
+              <div class="day-item"><div class="di-k"><i></i>上班打卡时间</div><div class="di-v" id="dayStart">--:--</div><div class="di-note" id="dayStartNote">启动客户端打卡</div></div>
+              <div class="day-item"><div class="di-k"><i></i>下班时间</div><div class="di-v" id="dayEnd">--:--</div><div class="di-note" id="dayEndNote">按打卡 + 工时推算</div></div>
+            </div>
+            <div class="day-note" id="dayNote">开启「开机启动」后，以启动打卡时刻为起点，按工作时长推算下班时间。</div>
+            <div class="detail-section">
+              <div class="ds-head"><span class="ds-title">当天感悟</span><button class="ds-edit" id="editDayNote">✎ 写 / 编辑</button></div>
+              <div class="ds-body note-content empty" id="dayNoteContent">这天还没有写下感悟。</div>
+            </div>
+            <div class="detail-section">
+              <div class="ds-head"><span class="ds-title">当天待办</span><span class="ds-count" id="dayTodoCount">无安排</span></div>
+              <div class="ds-body dt-todo-list" id="dayTodoContent"><div class="dt-empty">这天没有安排待办</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 设置页 -->
+        <div class="w-page" id="pageSettings" data-page="settings" hidden>
+          <div class="set-group">
+            <label class="set-label" for="cfgMonthly">月薪（CNY）</label>
+            <input class="set-input" type="number" id="cfgMonthly" min="1" step="100" value="12000">
+          </div>
+          <div class="set-group">
+            <label class="set-label">正常上班时间</label>
+            <div class="set-grid">
+              <input class="set-input time" type="time" id="cfgStart" value="09:00" aria-label="上班时间">
+              <input class="set-input time" type="time" id="cfgEnd" value="18:00" aria-label="下班时间">
+            </div>
+          </div>
+          <div class="set-group">
+            <label class="set-label">休息时间（不计薪）</label>
+            <div class="set-grid">
+              <input class="set-input time" type="time" id="cfgLunchS" value="12:00" aria-label="休息开始">
+              <input class="set-input time" type="time" id="cfgLunchE" value="13:00" aria-label="休息结束">
+            </div>
+          </div>
+          <div class="set-group">
+            <label class="set-label" for="cfgOtStart">加班开始时间（奋斗中起点 · 默认起算）</label>
+            <input class="set-input time" type="time" id="cfgOtStart" value="18:00">
+          </div>
+          <div class="set-group">
+            <label class="set-label" for="cfgRemind">提醒女朋友间隔（分钟）</label>
+            <input class="set-input" type="number" id="cfgRemind" min="1" max="480" step="5" value="60">
+          </div>
+          <div class="set-group">
+            <div class="switch-row">
+              <div class="sr-label">开机启动<span style="display:block;font-size:9px;color:var(--low);margin-top:3px">开机自启并打卡 · 下班按打卡时间推算</span></div>
+              <button class="switch" id="cfgAutoBoot" role="switch" aria-checked="false" aria-label="开机启动"></button>
+            </div>
+          </div>
+          <div class="set-group">
+            <div class="switch-row">
+              <div class="sr-label">剔除法定节假日<span style="display:block;font-size:9px;color:var(--low);margin-top:3px">假日不赚薪 · 调休上班日照常计薪</span></div>
+              <button class="switch" id="cfgHoliday" role="switch" aria-checked="false" aria-label="剔除法定节假日"></button>
+            </div>
+            <div class="holi-panel" id="holiPanel" hidden>
+              <div class="holi-summary">已内置国务院 <b>2026</b> 年放假安排：<b>33</b> 天法定假日自动剔除、<b>6</b> 天调休上班日照常计薪。还可手动增删要剔除的日期。</div>
+              <div class="holi-add">
+                <input type="date" id="holiDate" aria-label="要剔除的日期" min="2026-01-01" max="2026-12-31">
+                <button id="addHoli">＋ 添加</button>
+              </div>
+              <div class="holi-chips" id="holiChips"></div>
+            </div>
+          </div>
+          <div class="set-group">
+            <div class="ds-label"><span>加班工资梯度</span><span style="font-size:9px;color:var(--low)">到点即赚最高档</span></div>
+            <div id="defaultTiers"></div>
+            <button class="tier-add" id="addDefaultTier">＋ 添加一档</button>
+          </div>
+          <div class="set-hint">倒计时归零会弹出「是否加班」，选加班并定结束时间后按梯度结算。所有设置保存在服务端，换设备登录也一致。</div>
+        </div>
+      </div>
+
+      <nav class="tabbar" role="tablist" aria-label="主导航">
+        <button class="tab" role="tab" data-tab="clock" aria-selected="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>时钟</span></button>
+        <button class="tab" role="tab" data-tab="todo" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M3 6l1.4 1.4L7 5"/><path d="M3 12l1.4 1.4L7 11"/><path d="M3 18l1.4 1.4L7 17"/></svg><span>待办</span></button>
+        <button class="tab" role="tab" data-tab="calendar" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>日历</span></button>
+        <button class="tab" role="tab" data-tab="settings" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>设置</span></button>
+      </nav>
+    </section>
+
+    <!-- 缩放版小窗 -->
+    <section class="widget widget--compact" id="widgetCompact" aria-label="缩放版带薪时钟">
+      <div class="c-head">
+        <span class="c-label">距离下班</span>
+        <button class="c-expand" data-action="expand" aria-label="展开全屏版" title="展开">↗</button>
+      </div>
+      <div class="c-count" id="compactCountdown">--:--:--</div>
+      <div class="c-progress">
+        <div class="c-track"><div class="c-fill" id="compactFill"></div></div>
+        <span class="c-pct" id="compactPct">0%</span>
+      </div>
+      <div class="c-earn">
+        <span class="c-label">今日已赚</span>
+        <span class="c-earn-num" id="compactEarnBox"><i>¥</i><b class="roll-host" id="compactEarn">0.00</b><span class="gain-fx" id="compactGainFx" aria-hidden="true"></span></span>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span class="t-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></svg></span>
+    <div><div class="t-k">TO HER · 来自带薪时钟</div><div class="t-text" id="toastText"></div></div>
+  </div>
+
+  <canvas id="confettiCanvas" aria-hidden="true"></canvas>
+  <div class="finale-banner" id="finaleBanner" role="button" tabindex="-1" title="点一下，收好这份喜悦">
+    <div class="fb-emoji" id="fbEmoji">🎉</div>
+    <div class="fb-big" id="fbBig">正式下班啦！</div>
+    <div class="fb-sub" id="fbSub">今天圆满收工</div>
+    <div class="fb-hint">轻触这里 · 收好这份喜悦</div>
+  </div>
+
+  <!-- 下班询问 / 加班设置 -->
+  <div class="mask" id="offMask" role="dialog" aria-modal="true" aria-label="下班提醒">
+    <div class="modal">
+      <div class="m-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="off-mark cheer-mark" id="offMark">🎉</div>
+      <h2 class="cheer-title" id="offTitle">下班时间到！</h2>
+      <p class="m-sub" id="offSub">今天辛苦啦，先好好歇一会儿。<br>想再加会儿班吗？加班费会按梯度自动结算。</p>
+      <div class="off-choices" id="offChoices">
+        <button class="btn-ghost" id="offNo">不加了，下班</button>
+        <button class="btn-solid" id="offYes">加班</button>
+      </div>
+      <div class="off-panel" id="offPanel" hidden>
+        <label class="ol" for="offEnd">加班结束时间</label>
+        <input type="time" id="offEnd" value="20:40">
+        <div class="off-calc">
+          <span>加班费</span><b id="offPay">¥0</b><span class="sep">|</span><span>当日合计</span><b id="offTotal">¥0</b>
+        </div>
+        <button class="off-confirm" id="offConfirm">记下来</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 每日小记 -->
+  <div class="mask" id="noteMask" role="dialog" aria-modal="true" aria-label="写小记">
+    <div class="modal note-modal">
+      <div class="m-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="nm-head">
+        <div class="nm-mark" aria-hidden="true">✎</div>
+        <div><h2>写给自己</h2><p class="m-sub" id="noteModalDate">今天 · 记下此刻的心情与感悟</p></div>
+      </div>
+      <textarea class="nm-area" id="noteArea" maxlength="500" placeholder="今天发生了什么值得记住的事？写下来，之后的日历里还能再看到…"></textarea>
+      <div class="nm-foot">
+        <span class="nm-count" id="noteCharCount">0 / 500</span>
+        <div class="nm-btns">
+          <button class="nm-del" id="noteDelete" type="button">删除</button>
+          <button class="nm-save" id="noteSave" type="button">保存感悟</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 摸鱼魔盒：图片 -->
+  <div class="mask" id="moyuImgMask" role="dialog" aria-modal="true" aria-label="图片魔盒">
+    <div class="modal moyu-modal" data-kind="img">
+      <div class="m-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="mm-head">
+        <div class="mm-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="m4 18 5.2-5.2a1.6 1.6 0 0 1 2.2 0L16 17m1-2 2-2a1.6 1.6 0 0 1 2.2 0L22 16"/></svg></div>
+        <div><h2>图片魔盒</h2><p class="m-sub">随机送你一张图，歇歇眼睛</p></div>
+      </div>
+      <div class="mm-body">
+        <div class="mm-loading" id="imgLoading"><span class="mm-spin"></span><span>正在抽取一张好图…</span></div>
+        <img class="mm-img" id="moyuImgEl" alt="随机图片" hidden>
+        <div class="mm-err" id="imgErr" hidden>图片加载失败啦<br>检查网络后再试一次～</div>
+      </div>
+      <div class="mm-foot"><span class="mm-src">图片来自 picsum.photos</span><button class="mm-again" id="imgAgain" type="button">换一张 ↻</button></div>
+    </div>
+  </div>
+
+  <!-- 摸鱼魔盒：诗歌 -->
+  <div class="mask" id="moyuPoemMask" role="dialog" aria-modal="true" aria-label="诗歌魔盒">
+    <div class="modal moyu-modal" data-kind="poem">
+      <div class="m-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="mm-head">
+        <div class="mm-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-2-1.4-4.6-1.8-8-1v12c3.4-.8 6-.4 8 1 2-1.4 4.6-1.8 8-1V5c-3.4-.8-6-.4-8 1Z"/><path d="M12 6v12"/></svg></div>
+        <div><h2>诗歌魔盒</h2><p class="m-sub">随机送你一首诗，养养心</p></div>
+      </div>
+      <div class="mm-body">
+        <div class="mm-loading" id="poemLoading"><span class="mm-spin"></span><span>正在找一首好诗…</span></div>
+        <div class="mm-poem" id="moyuPoemEl" hidden>
+          <div class="pt" id="poemTitle"></div>
+          <div class="pmeta" id="poemMeta"></div>
+          <div class="plines" id="poemLines"></div>
+        </div>
+        <div class="mm-err" id="poemErr" hidden>诗歌获取失败啦<br>检查网络后再试一次～</div>
+      </div>
+      <div class="mm-foot"><span class="mm-src">诗词来自 poetry.palemoky.com</span><button class="mm-again" id="poemAgain" type="button">再来一首 ↻</button></div>
+    </div>
+  </div>
+
+  <!-- 摸鱼魔盒：怪话 -->
+  <div class="mask" id="moyuSayingMask" role="dialog" aria-modal="true" aria-label="莫名其妙的话">
+    <div class="modal moyu-modal" data-kind="saying">
+      <div class="m-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="mm-head">
+        <div class="mm-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5c-1.1 0-2.2-.24-3.1-.67L5 20l1.3-3.6A7.5 7.5 0 1 1 20 11.5Z"/><path d="M9.8 9.4a2.3 2.3 0 0 1 4.4.9c0 1.5-2.2 1.8-2.2 3.1"/><path d="M12 16.4h.01"/></svg></div>
+        <div><h2>莫名其妙的话</h2><p class="m-sub">没头没脑，但看了会笑</p></div>
+      </div>
+      <div class="mm-body">
+        <div class="mm-loading" id="sayingLoading"><span class="mm-spin"></span><span>正在捞一句怪话…</span></div>
+        <div class="mm-saying" id="moyuSayingEl" hidden>
+          <span class="sq" aria-hidden="true">“</span>
+          <p class="st" id="sayingText"></p>
+          <span class="sq sq-r" aria-hidden="true">”</span>
+          <div class="sb" aria-hidden="true"></div>
+        </div>
+        <div class="mm-err" id="sayingErr" hidden>怪话跑丢了<br>检查网络后再试一次～</div>
+      </div>
+      <div class="mm-foot"><span class="mm-src">语录来自 uapis.cn</span><button class="mm-again" id="sayingAgain" type="button">再来一句 ↻</button></div>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

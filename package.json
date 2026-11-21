@@ -1,0 +1,29 @@
+{
+  "name": "old-cat-clock",
+  "version": "0.1.0",
+  "private": true,
+  "description": "耄猫时钟 - Electron 客户端 + Vue 管理后台 + NestJS 服务端",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w @maomao/shared",
+    "build": "npm run build:shared && npm run build -w @maomao/server && npm run build -w @maomao/admin && npm run build -w @maomao/desktop",
+    "dev": "npm run build:shared && concurrently -k -n server,admin -c cyan,green \"npm run dev -w @maomao/server\" \"npm run dev -w @maomao/admin\"",
+    "dev:all": "npm run build:shared && concurrently -k -n server,admin,desktop -c cyan,green,magenta \"npm run dev -w @maomao/server\" \"npm run dev -w @maomao/admin\" \"npm run dev -w @maomao/desktop\"",
+    "dev:server": "npm run build:shared && npm run dev -w @maomao/server",
+    "dev:admin": "npm run build:shared && npm run dev -w @maomao/admin",
+    "dev:desktop": "npm run build:shared && npm run dev -w @maomao/desktop",
+    "start": "npm run start -w @maomao/server",
+    "typecheck": "npm run build:shared && npm run typecheck -w @maomao/server && npm run typecheck -w @maomao/admin && npm run typecheck -w @maomao/desktop"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

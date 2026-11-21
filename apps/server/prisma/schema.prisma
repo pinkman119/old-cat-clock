@@ -90,3 +90,21 @@ model LoveNote {
   content   String   @unique
   createdAt DateTime @default(now())
 }
+
+/// 后台上传的 Electron 客户端安装包：文件落在服务端磁盘，元数据入库
+model ClientRelease {
+  id            String   @id @default(uuid())
+  version       String
+  platform      String
+  /// 上传时的原始文件名，下载时作为附件名返回
+  fileName      String
+  /// 服务端磁盘文件名（随机 UUID + 后缀），不对外暴露
+  storageName   String   @unique
+  size          Int
+  mimeType      String
+  note          String   @default("")
+  downloadCount Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([platform, createdAt])
+}

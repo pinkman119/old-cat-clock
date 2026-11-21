@@ -96,8 +96,9 @@ npm run dev
 
 1. 浏览器打开 `http://127.0.0.1:5173/`，用默认管理员登录。
 2. 在「账户与密码配置」中为 TA 新增账号；在「情话管理」中维护情话库（客户端整点轮换展示）。
-3. 启动 Electron 客户端，用该账号登录：无边框 widget 小窗即带薪时钟；登录态加密保存，重启免登录。
-4. 客户端「设置」页可调薪资与工时；「开机自启并打卡」开关同时写入系统自启项与服务端配置。
+3. 打包好 Electron 客户端后，在「客户端安装包」中上传（填写版本号、平台、更新说明）；后台可直接下载，也可复制公开链接分发给使用者。
+4. 启动 Electron 客户端，用该账号登录：无边框 widget 小窗即带薪时钟；登录态加密保存，重启免登录。
+5. 客户端「设置」页可调薪资与工时；「开机自启并打卡」开关同时写入系统自启项与服务端配置。
 
 > 安全约束：系统至少保留一个管理员账号，删除或降级最后一个管理员会被服务端拒绝。
 
@@ -113,8 +114,12 @@ npm run dev
 | `MAOMAO_JWT_EXPIRES` | `7d` | 令牌有效期 |
 | `MAOMAO_ADMIN_USERNAME` | `admin` | 初始管理员用户名 |
 | `MAOMAO_ADMIN_PASSWORD` | `maomao123` | 初始管理员密码 |
+| `MAOMAO_CLIENT_RELEASES_DIR` | `apps/server/storage/client-releases` | 后台上传的客户端安装包存放目录（生产建议挂持久卷） |
+| `MAOMAO_CLIENT_MAX_SIZE_MB` | `300` | 单个安装包上传大小上限（MB） |
 
 Vue 后台开发时由 `vite.config.ts` 把 `/api` 代理到 `MAOMAO_SERVER_URL`（默认 `http://127.0.0.1:3000`）；Electron 主进程同样读取该环境变量决定服务端地址。生产构建产物 `apps/admin/dist` 可部署到任意静态服务器（服务端 CORS 已放开）。
+
+客户端安装包存放在 `apps/server/storage/client-releases/`（可通过 `MAOMAO_CLIENT_RELEASES_DIR` 改到持久卷），该目录已加入 `.gitignore`；生产部署时请备份此目录，否则重新部署后已上传的安装包会丢失。
 
 ## 关键设计
 
@@ -124,10 +129,11 @@ Vue 后台开发时由 `vite.config.ts` 把 `/api` 代理到 `MAOMAO_SERVER_URL`
 4. **无边框双视图窗口**：`frame:false` + `-webkit-app-region: drag`；全屏版 448×744、缩放版 448×272，`setContentSize` 切换。
 5. **三方魔盒无 CORS 问题**：图片/诗歌/怪话由主进程 `fetch`，渲染层只收结果；失败时本地兜底文案。
 6. **情话确定性轮换**：服务器按「日期×24+小时」做 sin 哈希选句，同一小时全网一致、跨小时自动换新；内容在 Vue 后台维护。
+7. **客户端安装包分发**：后台以 `multipart/form-data` 上传，文件写入服务端磁盘、版本与大小等元数据存入 `ClientRelease` 表；管理端下载带令牌，公开链接无需登录即可分发，下载次数自动累计。
 
 ## REST API
 
-除登录与健康检查外，均需 `Authorization: Bearer <token>`；`/api/admin/*` 还需管理员角色。
+除登录、健康检查与 `/api/client-downloads/*` 外，均需 `Authorization: Bearer <token>`；`/api/admin/*` 还需管理员角色。
 
 | 方法 | 路径 | 说明 | 使用方 |
 | --- | --- | --- | --- |
@@ -149,6 +155,12 @@ Vue 后台开发时由 `vite.config.ts` 把 `/api` 代理到 `MAOMAO_SERVER_URL`
 | PATCH / DELETE | `/api/admin/users/:id` | 重置密码等 / 删除账号 | Vue 后台 |
 | GET / POST | `/api/admin/love-notes` | 情话列表 / 新增 | Vue 后台 |
 | PATCH / DELETE | `/api/admin/love-notes/:id` | 编辑 / 删除情话 | Vue 后台 |
+| GET / POST | `/api/admin/client-releases` | 安装包列表 / 上传（multipart：`version`、`platform`、`note`、`file`） | Vue 后台 |
+| GET | `/api/admin/client-releases/:id/download` | 后台下载安装包（带令牌） | Vue 后台 |
+| DELETE | `/api/admin/client-releases/:id` | 删除安装包（记录与文件） | Vue 后台 |
+| GET | `/api/client-downloads?platform=` | 公开安装包列表 | 分发页面 |
+| GET | `/api/client-downloads/latest/file?platform=` | 公开下载指定平台最新版 | 分发链接 |
+| GET | `/api/client-downloads/:id/file` | 公开下载指定版本 | 分发链接 |
 
 ## 后续可演进方向
 

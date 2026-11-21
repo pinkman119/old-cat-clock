@@ -1,3 +1,5 @@
+import type { CLIENT_PLATFORMS } from './constants';
+
 export type UserRole = 'admin' | 'user';
 
 /** 对外暴露的用户信息，绝不包含密码哈希 */
@@ -148,4 +150,22 @@ export interface AdminOverview {
   totalCheckins: number;
   overtimeDays: number;
   totalLoveNotes: number;
+}
+
+/* ============ 客户端安装包 ============ */
+
+export type ClientPlatform = (typeof CLIENT_PLATFORMS)[number];
+
+/** 后台上传的 Electron 客户端安装包（不暴露服务端磁盘文件名） */
+export interface ClientRelease {
+  id: string;
+  version: string;
+  platform: ClientPlatform;
+  fileName: string;
+  /** 字节数 */
+  size: number;
+  mimeType: string;
+  note: string;
+  downloadCount: number;
+  createdAt: string;
 }

@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -15,12 +17,19 @@ async function bootstrap(): Promise<void> {
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }),
   );
 
+  // 生产部署时由 MAOMAO_ADMIN_DIST 指定 Vue 构建产物，与 /api 同源提供，
+  // 客户端与后台只需开放同一个端口。
+  const adminDist = process.env.MAOMAO_ADMIN_DIST;
+  const staticRoot = adminDist ? resolve(adminDist) : '';
+  const serveAdmin = staticRoot !== '' && existsSync(resolve(staticRoot, 'index.html'));
+  if (serveAdmin) app.useStaticAssets(staticRoot, { index: 'index.html' });
+
   const port = Number(process.env.MAOMAO_SERVER_PORT ?? DEFAULT_SERVER_PORT);
   await app.listen(port, '0.0.0.0');
 
   const logger = new Logger('Bootstrap');
-  logger.log(`API 服务已启动: http://127.0.0.1:${port}/api/health`);
-  logger.log(`Vue 管理后台请访问: http://127.0.0.1:5173/`);
+  logger.log(`API 服务已启动: http://0.0.0.0:${port}/api/health`);
+  logger.log(serveAdmin ? `管理后台已启用: http://0.0.0.0:${port}/` : `Vue 管理后台请访问: http://127.0.0.1:5173/`);
 }
 
 void bootstrap();

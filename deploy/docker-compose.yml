@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: maomao-clock-db
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      POSTGRES_USER: ${POSTGRES_USER:-maomao}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-maomao123}
+      POSTGRES_DB: ${POSTGRES_DB:-maomao_clock}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-maomao} -d ${POSTGRES_DB:-maomao_clock}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  server:
+    image: ${IMAGE_NAME:-maomao-clock:0.1.0}
+    container_name: maomao-clock-server
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-maomao}:${POSTGRES_PASSWORD:-maomao123}@db:5432/${POSTGRES_DB:-maomao_clock}?schema=public
+      MAOMAO_SERVER_PORT: 3000
+      MAOMAO_ADMIN_DIST: /app/admin-dist
+      MAOMAO_CLIENT_RELEASES_DIR: /app/storage/client-releases
+      MAOMAO_CLIENT_MAX_SIZE_MB: ${MAOMAO_CLIENT_MAX_SIZE_MB:-300}
+      MAOMAO_JWT_SECRET: ${MAOMAO_JWT_SECRET:-change-this-secret-before-deploy}
+      MAOMAO_JWT_EXPIRES: ${MAOMAO_JWT_EXPIRES:-30d}
+      MAOMAO_ADMIN_USERNAME: ${MAOMAO_ADMIN_USERNAME:-huimin}
+      MAOMAO_ADMIN_PASSWORD: ${MAOMAO_ADMIN_PASSWORD:-20001024}
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    volumes:
+      - client-releases:/app/storage/client-releases
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  pgdata:
+  client-releases:

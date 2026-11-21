@@ -47,3 +47,15 @@ export const MAKEUP_2026 = [
   '2026-01-04', '2026-02-14', '2026-02-28',
   '2026-05-09', '2026-09-20', '2026-10-10',
 ] as const;
+
+/** 客户端安装包：支持的平台 */
+export const CLIENT_PLATFORMS = ['windows', 'macos', 'linux', 'other'] as const;
+
+/** 客户端安装包：允许上传的后缀（.tar.gz 由服务端单独识别） */
+export const CLIENT_FILE_EXTENSIONS = [
+  '.exe', '.msi', '.dmg', '.pkg', '.zip', '.7z',
+  '.appimage', '.deb', '.rpm', '.apk', '.tar.gz',
+] as const;
+
+/** 客户端安装包：单文件默认大小上限（MB），可用 MAOMAO_CLIENT_MAX_SIZE_MB 覆盖 */
+export const CLIENT_MAX_SIZE_MB = 300;

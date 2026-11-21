@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import { api, hasToken, setToken } from './api';
-import type { AdminOverview, LoveNote, PublicUser, UserRole } from '@maomao/shared';
+import type {
+  AdminOverview,
+  ClientPlatform,
+  ClientRelease,
+  LoveNote,
+  PublicUser,
+  UserRole,
+} from '@maomao/shared';
 
 const loggedIn = ref(false);
 const currentUser = ref<PublicUser | null>(null);
@@ -10,7 +17,7 @@ const busy = ref(false);
 const loginError = ref('');
 const toastText = ref('');
 
-const loginForm = reactive({ username: 'admin', password: '' });
+const loginForm = reactive({ username: 'huimin', password: '' });
 const createForm = reactive({
   username: '',
   password: '',
@@ -26,6 +33,22 @@ const loveNotes = ref<LoveNote[]>([]);
 const newLoveNote = ref('');
 const editingLove = ref<LoveNote | null>(null);
 const editingLoveText = ref('');
+
+const clientReleases = ref<ClientRelease[]>([]);
+const releaseForm = reactive({ version: '', platform: 'windows' as ClientPlatform, note: '' });
+const releaseFile = ref<File | null>(null);
+const fileInput = ref<HTMLInputElement | null>(null);
+const uploading = ref(false);
+const uploadPercent = ref<number | null>(null);
+const platformOptions: ClientPlatform[] = ['windows', 'macos', 'linux', 'other'];
+const platformLabels: Record<ClientPlatform, string> = {
+  windows: 'Windows',
+  macos: 'macOS',
+  linux: 'Linux',
+  other: '其他',
+};
+// 与服务端 CLIENT_FILE_EXTENSIONS 白名单保持一致（服务端会再次校验）
+const releaseAccept = '.exe,.msi,.dmg,.pkg,.zip,.7z,.appimage,.deb,.rpm,.apk,.tar.gz';
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -62,6 +85,15 @@ async function loadData(): Promise<void> {
     notify(errorMessage(error));
     if (!hasToken()) logout();
   }
+  await loadClientReleases();
+}
+
+async function loadClientReleases(): Promise<void> {
+  try {
+    clientReleases.value = await api.clientReleases();
+  } catch (error) {
+    notify(errorMessage(error));
+  }
 }
 
 async function login(): Promise<void> {
@@ -95,6 +127,7 @@ function logout(): void {
   overview.value = null;
   users.value = [];
   loveNotes.value = [];
+  clientReleases.value = [];
 }
 
 /** ===== 情话管理 ===== */
@@ -199,6 +232,79 @@ async function removeUser(user: PublicUser): Promise<void> {
   }
 }
 
+/** ===== 客户端安装包管理 ===== */
+
+function onReleaseFileChange(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  releaseFile.value = input.files?.[0] ?? null;
+}
+
+function resetReleaseForm(): void {
+  releaseForm.version = '';
+  releaseForm.platform = 'windows';
+  releaseForm.note = '';
+  releaseFile.value = null;
+  if (fileInput.value) fileInput.value.value = '';
+}
+
+async function uploadRelease(): Promise<void> {
+  const file = releaseFile.value;
+  if (!file || uploading.value) return;
+  uploading.value = true;
+  uploadPercent.value = 0;
+  try {
+    await api.uploadClientRelease(
+      { version: releaseForm.version, platform: releaseForm.platform, note: releaseForm.note, file },
+      (percent) => { uploadPercent.value = percent; },
+    );
+    resetReleaseForm();
+    notify('客户端安装包已上传，可下载或复制公开链接');
+    await loadClientReleases();
+  } catch (error) {
+    notify(errorMessage(error));
+  } finally {
+    uploading.value = false;
+    uploadPercent.value = null;
+  }
+}
+
+async function downloadRelease(release: ClientRelease): Promise<void> {
+  try {
+    await api.downloadClientRelease(release);
+    notify(`已开始下载 ${release.fileName}`);
+    await loadClientReleases();
+  } catch (error) {
+    notify(errorMessage(error));
+  }
+}
+
+async function copyDownloadUrl(release: ClientRelease): Promise<void> {
+  const url = api.publicClientDownloadUrl(release.id);
+  try {
+    await navigator.clipboard.writeText(url);
+    notify('公开下载地址已复制');
+  } catch {
+    window.prompt('复制下面的公开下载地址：', url);
+  }
+}
+
+async function removeRelease(release: ClientRelease): Promise<void> {
+  if (!window.confirm(`确认删除安装包「${release.fileName}」（${release.version}）？`)) return;
+  try {
+    await api.deleteClientRelease(release.id);
+    notify('安装包已删除');
+    await loadClientReleases();
+  } catch (error) {
+    notify(errorMessage(error));
+  }
+}
+
+function formatSize(bytes: number): string {
+  return bytes < 1024 * 1024
+    ? `${(bytes / 1024).toFixed(1)} KB`
+    : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 onMounted(async () => {
   try {
     await api.health();
@@ -248,7 +354,7 @@ onMounted(async () => {
             {{ busy ? '登录中…' : '登录' }}
           </button>
         </form>
-        <p class="tip">初始账号 <code>admin</code> / <code>maomao123</code>，可在服务端 <code>.env</code> 修改。</p>
+        <p class="tip">初始账号 <code>huimin</code> / <code>20001024</code>，可在服务端 <code>.env</code> 修改。</p>
       </section>
 
       <section v-else>
@@ -366,6 +472,81 @@ onMounted(async () => {
                   </td>
                 </tr>
                 <tr v-if="!loveNotes.length"><td colspan="3" class="empty">情话库为空，客户端将一直显示兜底文案</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>客户端安装包</h2>
+            <span class="muted">上传后可在后台下载，也可复制公开链接分发给使用者</span>
+          </div>
+
+          <form class="release-form" @submit.prevent="uploadRelease">
+            <label>版本号
+              <input v-model="releaseForm.version" placeholder="如 1.0.0" maxlength="32" required />
+            </label>
+            <label>平台
+              <select v-model="releaseForm.platform">
+                <option v-for="item in platformOptions" :key="item" :value="item">
+                  {{ platformLabels[item] }}
+                </option>
+              </select>
+            </label>
+            <label>安装包文件
+              <input
+                ref="fileInput"
+                type="file"
+                :accept="releaseAccept"
+                required
+                @change="onReleaseFileChange"
+              />
+            </label>
+            <label class="release-note">更新说明
+              <input v-model="releaseForm.note" placeholder="可选，最多 200 字" maxlength="200" />
+            </label>
+            <button class="btn primary" type="submit" :disabled="uploading || !releaseFile">
+              {{ uploading ? '上传中 ' + (uploadPercent ?? 0) + '%' : '上传安装包' }}
+            </button>
+          </form>
+
+          <div v-if="uploading" class="progress">
+            <div :style="{ width: (uploadPercent ?? 0) + '%' }"></div>
+          </div>
+          <p class="tip" style="margin: 0 0 16px">
+            支持 {{ releaseAccept }}，单个文件最大 300MB（服务端可用 MAOMAO_CLIENT_MAX_SIZE_MB 调整）。
+            公开最新版地址：<code>/api/client-downloads/latest/file?platform=windows</code>
+          </p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>版本</th><th>平台</th><th>文件</th><th>大小</th>
+                  <th>更新说明</th><th>上传时间</th><th>下载次数</th><th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="release in clientReleases" :key="release.id">
+                  <td><span class="tag">{{ release.version }}</span></td>
+                  <td>{{ platformLabels[release.platform] }}</td>
+                  <td class="release-filename">{{ release.fileName }}</td>
+                  <td>{{ formatSize(release.size) }}</td>
+                  <td class="release-note-cell">{{ release.note || '—' }}</td>
+                  <td>{{ formatTime(release.createdAt) }}</td>
+                  <td>{{ release.downloadCount }}</td>
+                  <td>
+                    <div class="cell-actions">
+                      <button class="btn" type="button" @click="downloadRelease(release)">下载</button>
+                      <button class="btn" type="button" @click="copyDownloadUrl(release)">复制链接</button>
+                      <button class="btn danger" type="button" @click="removeRelease(release)">删除</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="!clientReleases.length">
+                  <td colspan="8" class="empty">还没有上传客户端安装包，打包好 .exe / .dmg 后可直接上传</td>
+                </tr>
               </tbody>
             </table>
           </div>

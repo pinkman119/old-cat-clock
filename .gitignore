@@ -13,3 +13,9 @@ dist/
 # 服务端运行时数据（含账户密码哈希，禁止提交）
 apps/server/data/*.json
 apps/server/data/*.json.bak
+
+# 后台上传的客户端安装包（运行时产物，禁止提交）
+apps/server/storage/
+
+# 本地构建导出的镜像与部署包（build.sh / build.ps1 生成）
+deploy/output/

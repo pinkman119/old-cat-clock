@@ -5,7 +5,23 @@ import { APP_NAME, APP_VERSION, DEFAULT_SERVER_URL } from '@maomao/shared';
 import type { WorkConfig } from '@maomao/shared';
 import { ServerClient } from './server-client';
 
-const serverUrl = process.env.MAOMAO_SERVER_URL ?? DEFAULT_SERVER_URL;
+/** 服务端地址优先级：环境变量 > 打包时生成的 server-config.json > 本机默认地址 */
+function resolveServerUrl(): string {
+  const fromEnv = process.env.MAOMAO_SERVER_URL;
+  if (fromEnv) return fromEnv.replace(/\/+$/, '');
+  try {
+    const configPath = join(app.getAppPath(), 'server-config.json');
+    if (existsSync(configPath)) {
+      const config = JSON.parse(readFileSync(configPath, 'utf8')) as { serverUrl?: string };
+      if (config.serverUrl) return config.serverUrl.replace(/\/+$/, '');
+    }
+  } catch {
+    /* 配置缺失或损坏时回退到本机默认地址 */
+  }
+  return DEFAULT_SERVER_URL;
+}
+
+const serverUrl = resolveServerUrl();
 const client = new ServerClient(serverUrl);
 
 /**
@@ -17,6 +33,12 @@ const WINDOW_SIZE = {
   full: { width: 404, height: 587 },
   compact: { width: 430, height: 203 },
 } as const;
+
+/** 系统图标：与主界面「甲骨文猫」logo 同款；Windows 用多尺寸 ICO，其他平台用 PNG */
+const ASSETS_DIR = join(__dirname, '..', '..', 'assets');
+const TRAY_ICON_PATH = join(ASSETS_DIR, process.platform === 'win32' ? 'tray.ico' : 'tray.png');
+const APP_ICON_PATH = join(ASSETS_DIR, process.platform === 'win32' ? 'app-icon.ico' : 'app-icon.png');
+const NOTIFICATION_ICON_PATH = join(ASSETS_DIR, 'app-icon.png');
 
 /** 当前窗口模式 + 缩小前的全屏版位置（展开时还原） */
 let windowMode: 'full' | 'compact' = 'full';
@@ -236,6 +258,7 @@ async function dispatch(request: InvokeRequest): Promise<unknown> {
       new Notification({
         title: String(payload.title ?? APP_NAME),
         body: String(payload.body ?? ''),
+        icon: NOTIFICATION_ICON_PATH,
       }).show();
       return true;
     }
@@ -260,7 +283,7 @@ function showMainWindow(): void {
 
 /** 系统托盘：点 × 只是隐藏到后台，托盘「退出」才是真正退出 */
 function createTray(): void {
-  const icon = nativeImage.createFromPath(join(__dirname, '..', '..', 'assets', 'tray.png'));
+  const icon = nativeImage.createFromPath(TRAY_ICON_PATH);
   tray = new Tray(icon);
   tray.setToolTip('耄猫时钟 · 给她的带薪时钟');
   tray.setContextMenu(
@@ -289,6 +312,7 @@ function createWindow(): void {
     backgroundColor: '#00000000',
     roundedCorners: true,
     title: APP_NAME,
+    icon: APP_ICON_PATH,
     autoHideMenuBar: true,
     show: true,
     webPreferences: {

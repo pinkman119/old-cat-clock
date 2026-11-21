@@ -1,0 +1,15 @@
+.git
+.gitignore
+node_modules
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+**/*.log
+**/.env
+**/.env.local
+apps/server/data
+apps/server/storage
+apps/desktop/desktop-run.log
+deploy/out
+deploy/output
+doc
